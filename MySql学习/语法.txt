@@ -1,0 +1,142 @@
+创建表msg_pmid，设置时间默认值  CURRENT_TIMESTAMP
+
+CREATE TABLE `msg_pmid` (
+  `ID` bigint(20) NOT NULL AUTO_INCREMENT,
+  `pmid` bigint(20) NOT NULL,
+  `pcid` bigint(20) DEFAULT NULL,
+  `crtdate` datetime DEFAULT NULL,
+  `adddate` datetime DEFAULT NULL,
+  `mysqldate` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+
+存储过程：deletemsg
+1、创建/删除临时表/主键
+DROP TEMPORARY TABLE IF EXISTS tmp_table;
+		
+CREATE TEMPORARY TABLE IF NOT EXISTS tmp_table (ID int NOT NULL auto_increment, CMD VARCHAR(2000), PRIMARY KEY (`ID`));
+
+创建存储过程：
+DELIMITER $$
+
+CREATE DEFINER=`zgyey_20`@`%` PROCEDURE `km_getPMLatestMessages`(IN `_uid` int,IN `_publicid` int,IN `_typeid` int)
+BEGIN
+   ##这里写存储过程的具体逻辑;
+END$$
+
+DELIMITER ;
+
+
+---------------------------------------------------------------------------------------------------------
+DELIMITER $$
+
+CREATE DEFINER=`zgyey_20`@`%` PROCEDURE `clean_message`()
+
+BEGIN
+	
+	#Routine body goes here...
+	
+  INSERT INTO clean_message_log(begintime) VALUES (NOW());
+	
+  SET @ID = LAST_INSERT_ID();
+
+	
+  DELETE FROM push_message_move WHERE EXISTS (SELECT 1 FROM push_message_00 b WHERE push_message_move.pmid = b.pmid);
+	
+  DELETE FROM push_message_move WHERE EXISTS (SELECT 1 FROM push_message_01 b WHERE push_message_move.pmid = b.pmid);
+	
+  DELETE FROM user_sys_message_move WHERE EXISTS (SELECT 1 FROM user_sys_message_00 b WHERE user_sys_message_move.msgid = b.msgid);
+	
+  DELETE FROM user_sys_message_move WHERE EXISTS (SELECT 1 FROM user_sys_message_01 b WHERE user_sys_message_move.msgid = b.msgid);
+ 
+
+UPDATE move_message_log SET endtime = NOW() WHERE ID = @ID;
+
+
+END$$
+
+DELIMITER ;
+
+
+包含 EXISTS 用法
+--------------------------------
+
+存储过程变量：
+1) 不需要定义数据类型，直接使用 如:  Set @tableName = '[user]'  ，这样就定义了变量 @tableName
+2) 可以通过Set设置多个变量：SET @ID = NULL, @pmidbegin = NULL, @pmidend = NULL, @msgidbegin = NULL, @msgidend = NULL, @uuid = NULL, @send = NULL;
+
+-------------------------
+2、自增序列号
+auto_increment
+
+3、连接多个字符串：CONCAT   及执行拼接后的sql语句  具体查看（kmapp.km_getPMLatestMessages）
+
+SET @sqlcmd = CONCAT('SELECT pmid, Case When msgtype = 3 Then 4 Else msgtype End contenttype, action, publicid, date_format(CASE WHEN publicid In (16, 17, 18) THEN adddate + INTERVAL 2 SECOND ELSE adddate END, ''%Y-%m-%d %H:%i:%s'') date,  
+	Case When msgtype = 0 Then content Else title End title, file_url fileurl, content filedesc, '''' url, -1 shareable, CASE WHEN IFNULL(url, '''') = '''' Then '''' 
+ELSE CONCAT(CASE WHEN LOCATE(''uid='', url) > 0 THEN url
+					ELSE CASE WHEN LOCATE(''?'', url) > 0 Then CONCAT(url, ''&uid='', userid)
+ Else CONCAT(url, ''?uid='', userid)
+ END
+ END, ''&pmid='', pmid, CASE WHEN LOCATE(''view='', url) > 0 THEN '''' ELSE CASE WHEN url LIKE ''http://pr.zgyey.com%'' THEN ''&view=0'' ELSE ''&view=1'' END END) END contenturl, @uid toid, typeid, optag 
+FROM ', @tablename, ' a
+ WHERE userid = ', _uid, ' and adddate <= NOW() and deletetag = 1 and publicid = ', _publicid, @typeid, 'ORDER BY adddate DESC LIMIT 5 ;');
+
+
+		
+PREPARE stmt FROM @sqlcmd;
+		
+EXECUTE stmt;
+------------------------------
+
+
+4、当前时间
+1） CURRENT_TIMESTAMP  
+UPDATE send_record SET getuigetdate = CURRENT_TIMESTAMP WHERE ID = @ID;
+2） NOW()
+INSERT INTO clean_message_log(begintime) VALUES (NOW());
+
+UPDATE runningcheck SET lastrun = NOW() WHERE pipe = 0;
+
+5、时间格式化 date_format
+date_format(CASE WHEN publicid In (16, 17, 18) THEN adddate + INTERVAL 2 SECOND ELSE adddate END, ''%Y-%m-%d %H:%i:%s'') date
+
+--日期加减（INTERVAL 2 month/day/hour/minute/second）
+set @adddate = now(),@publicid=16;
+
+select date_format(CASE WHEN @publicid In (16, 17, 18) THEN @adddate + INTERVAL 2 month ELSE @adddate END, '%Y-%m-%d %H:%i:%s') date,@adddate adddate
+
+6、时间判断
+select * from 表名 where adddate <= NOW()
+
+7、Case When
+SET @tablename = CASE(_uid % 100) % 10 WHEN 0 THEN 'push_message_00' WHEN 1 THEN 'push_message_01' ELSE 'push_message' END;
+
+8、IFNULL
+IF IFNULL(_uid, 0) <= 0 THEN
+
+9、IF ESLE 
+IF _publicid In (16, 17, 18) THEN
+			
+ SET @typeid = CONCAT(' and typeid = ', _typeid);
+		
+ELSE
+			
+ SET @typeid = ' ';
+
+END IF;
+
+10、REPLACE INTO 和Inser Into差不多；（区别：REPLACE INTO有就更新，没有就新增。）
+REPLACE INTO pmid_gettui(UUID, pmid) values(123,100);
+
+INSERT IGNORE 与INSERT INTO的区别就是INSERT IGNORE会忽略数据库中已经存在 的数据，如果数据库没有数据，就插入新的数据，如果有数据的话就跳过这条数据。这样就可以保留数据库中已经存在数据，达到在间隙中插入数据的目的。
+eg:
+insert ignore into table(name)  select  name from table2 
+
+
+----------------------------------------------
+11、判断是否存在 LOCATE
+LOCATE(''view='', url) > 0
+
+12、替换字符串 REPLACE
+SELECT REPLACE('www.k686.com', 'www', 'http://www'); 

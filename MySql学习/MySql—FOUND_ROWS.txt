@@ -1,0 +1,29 @@
+mysql 的FOUND_ROWS()
+
+例如需要取出一张表的前10行，同时又需要取出符合条件的总数。这在某些翻页操作中很常见
+
+SELECT SQL_CALC_FOUND_ROWS * FROM tbl_name
+
+WHERE id > 100 LIMIT 10;
+
+在上一查询之后，你只需要用FOUND_ROWS()就能获得查询总数，这个数目是抛掉了LIMIT之后的结果数:
+
+SELECT FOUND_ROWS();
+
+其中第一个sql里面的SQL_CALC_FOUND_ROWS不可省略，它表示需要取得结果数，也是后面使用FOUND_ROWS()函数的铺垫。
+
+参考:
+
+http://www.ooso.net/archives/342
+
+
+SELECT语句中经常可能用LIMIT限制返回行数。有时候可能想要知道如果没有LIMIT会返回多少行，但又不想再执行一次相同语句。那么，在SELECT查询中包含SQL_CALC_FOUND_ROWS选项，然后执行FOUND_ROWS()就可以了：
+
+mysql> SELECT SQL_CALC_FOUND_ROWS * FROM tbl_name
+-> WHERE id > 100 LIMIT 10;
+mysql> SELECT FOUND_ROWS（）
+
+第二个SELECT将返回第一条SELECT如果没有LIMIT时返回的行数,
+如果在前一条语句中没有使用SQL_CALC_FOUND_ROWS选项，FOUND_ROWS()将返回前一条语句实际返回的行数。
+
+FOUND_ROWS()得到的数字是临时的，执行下一条语句就会失效。如果想要这个数字，就要将它保存下来。

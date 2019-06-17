@@ -1,0 +1,179 @@
+
+
+#数据库存储过程（参数写法： IN '_uid' int,IN '_publicid' int 等）
+
+------------------------------------------参数写法一（CommandType.StoredProcedure）------------------------------------------
+use kmapp_00;
+
+DELIMITER $$
+CREATE DEFINER=`zgyey_20`@`%` PROCEDURE `km_getPMLatestMessages`(IN `_uid` int,IN `_publicid` int,IN `_typeid` int)
+BEGIN
+	
+
+	IF IFNULL(_uid, 0) <= 0 THEN
+		SELECT -1 code, '请求失败' info;
+	ELSE
+		SELECT 0 code, '获取成功' info;
+
+		SET @tablename = CASE(_uid % 100) % 10 WHEN 0 THEN 'push_message_00' 
+																					 WHEN 1 THEN 'push_message_01' 
+																					 WHEN 2 THEN 'push_message_02' 
+																					 WHEN 3 THEN 'push_message_03' 
+																					 WHEN 4 THEN 'push_message_04' 
+																					 WHEN 5 THEN 'push_message_05' 
+																					 WHEN 6 THEN 'push_message_06' 
+																					 WHEN 7 THEN 'push_message_07' 
+																					 WHEN 8 THEN 'push_message_08' 
+																					 WHEN 9 THEN 'push_message_09'
+																					 ELSE 'push_message'
+											END;
+
+		IF _publicid In (16, 17, 18) THEN
+			SET @typeid = CONCAT(' and typeid = ', _typeid);
+		ELSE
+			SET @typeid = ' ';
+		END IF;
+
+		SET @sqlcmd = CONCAT('SELECT pmid, Case When msgtype = 3 Then 4 Else msgtype End contenttype, action, publicid,  
+																 date_format(CASE WHEN publicid In (16, 17, 18) THEN adddate + INTERVAL 2 SECOND ELSE adddate END, ''%Y-%m-%d %H:%i:%s'') date,  
+																 Case When msgtype = 0 Then content Else title End title, file_url fileurl, content filedesc, '''' url, -1 shareable, 
+																 CASE WHEN IFNULL(url, '''') = '''' Then '''' 
+																			ELSE CONCAT(CASE WHEN LOCATE(''uid='', url) > 0 THEN url
+																											 ELSE CASE WHEN LOCATE(''?'', url) > 0 Then CONCAT(url, ''&uid='', userid)
+																																 Else CONCAT(url, ''?uid='', userid)
+																														END
+																									END, ''&pmid='', pmid, CASE WHEN LOCATE(''view='', url) > 0 THEN '''' 
+																																							ELSE CASE WHEN url LIKE ''http://pr.zgyey.com%'' THEN ''&view=0'' ELSE ''&view=1'' END END)
+																 END contenturl, @uid toid, typeid, optag  
+														FROM ', @tablename, ' a
+														WHERE userid = ', _uid, ' and adddate <= NOW() and deletetag = 1 and publicid = ', _publicid, @typeid, ' 
+														ORDER BY adddate DESC LIMIT 5 ;');
+
+		PREPARE stmt FROM @sqlcmd;
+		EXECUTE stmt;
+
+	END IF;
+END$$
+DELIMITER ;
+
+
+
+#-------------------------------------------------------------------------------#
+
+#C#后台调用（参数写法： IN '_uid' int,IN '_publicid' int 等）
+
+MySqlParameter[] spms = {
+                    new MySqlParameter("_uid", GetValue("uid")),
+                    new MySqlParameter("_publicid", GetValue("publicid")),
+                    new MySqlParameter("_typeid", GetValue("typeid"))
+                    
+                    };
+                DataSet dsx = MySQLHelper.GetDataSet(MySQLHelper.ConnectionStringByUid(int.Parse(GetValue("uid"))), CommandType.StoredProcedure, "km_getPMLatestMessages", spms);
+
+
+
+--------------------------------------参数写法二（CommandType.Text）-------------------------------------------
+
+格式：@status,@msgid 
+
+MySqlParameter[] spms = {
+				            new MySqlParameter("@status",2),
+                            new MySqlParameter("@receivedate",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")),
+				            new MySqlParameter("@msgid", str)
+                        };
+                            sql = "update user_message Set status = CASE WHEN status = 2 THEN status ELSE ? END, receivedate = CASE WHEN receivedate IS NULL THEN ? ELSE receivedate END Where msgid = ?";
+                            //sql = "update user_message set status = ? ,receivedate = ? where msgid=?";
+                            cat = MySQLHelper.ExecuteNonQuery(MySQLHelper.ConnectionStringByUid(uid), CommandType.Text, sql, spms);
+
+
+
+---------------------------------------返回多个数据集(km_getNewMessages)---------------------------------------------
+
+--包含存储过来里调用别的存储过程 call
+
+DELIMITER $$
+CREATE DEFINER=`zgyey_20`@`%` PROCEDURE `km_getNewMessages`(IN `_uid` int,IN `_sysop` int,IN `_relationship` int)
+BEGIN
+	
+	IF IFNULL(_uid, 0) <= 0 THEN
+		SELECT -1 code, '请求失败' info;
+	ELSE
+		SELECT msgid pmid, Case When msgtype = 3 Then 4 Else msgtype End contenttype, action, senderid uid, userid toid, date_format(adddate, '%Y-%m-%d %H:%i:%s') date, IFNULL(content, '') content, '' contenturl  
+			FROM user_message
+			WHERE userid = @uid and status = 1;
+
+		CALL km_getConversationMessages(_uid, _sysop, _relationship);
+
+	END IF;
+END$$
+DELIMITER ;
+
+------------------------------km_getConversationMessages---------------------------------
+
+DELIMITER $$
+CREATE DEFINER=`zgyey_20`@`%` PROCEDURE `km_getConversationMessages`(IN `_uid` int,IN `_sysop` int,IN `_relationship` int)
+BEGIN
+	
+	IF _uid > 0 THEN
+		SET @tablename = CASE(_uid % 100) % 10 WHEN 0 THEN 'push_message_00' 
+																					 WHEN 1 THEN 'push_message_01' 
+																					 WHEN 2 THEN 'push_message_02' 
+																					 WHEN 3 THEN 'push_message_03' 
+																					 WHEN 4 THEN 'push_message_04' 
+																					 WHEN 5 THEN 'push_message_05' 
+																					 WHEN 6 THEN 'push_message_06' 
+																					 WHEN 7 THEN 'push_message_07' 
+																					 WHEN 8 THEN 'push_message_08' 
+																					 WHEN 9 THEN 'push_message_09'
+																					 ELSE 'push_message'
+											END;
+
+		SET @sqlcmd = CONCAT('SELECT pmid, Case When msgtype = 3 Then 4 Else msgtype End contenttype, action, publicid,  
+																 date_format(CASE WHEN publicid In (16, 17, 18) THEN adddate + INTERVAL 2 SECOND ELSE adddate END, ''%Y-%m-%d %H:%i:%s'') date,  
+																 Case When msgtype = 0 Then content Else title End title, file_url fileurl, content filedesc, '''' url, -1 shareable, 
+																 CASE WHEN IFNULL(url, '''') = '''' Then '''' 
+																			ELSE CONCAT(CASE WHEN LOCATE(''uid='', url) > 0 THEN url
+																											 ELSE CASE WHEN LOCATE(''?'', url) > 0 Then CONCAT(url, ''&uid='', userid)
+																																 Else CONCAT(url, ''?uid='', userid)
+																														END
+																									END, ''&pmid='', pmid, CASE WHEN LOCATE(''view='', url) > 0 THEN '''' 
+																																							ELSE CASE WHEN url LIKE ''http://pr.zgyey.com%'' THEN ''&view=0'' ELSE ''&view=1'' END END)
+																 END contenturl, userid toid, typeid, optag  
+														FROM ', @tablename, ' a
+														WHERE userid = ', _uid, ' and adddate > DATE_ADD(NOW(), INTERVAL -15 DAY) and adddate <= NOW() and deletetag = 1;');
+
+		PREPARE stmt FROM @sqlcmd;
+		EXECUTE stmt;
+
+		SET @tablename = CASE(_uid % 100) % 10 WHEN 0 THEN 'user_sys_message_00' 
+																					 WHEN 1 THEN 'user_sys_message_01' 
+																					 WHEN 2 THEN 'user_sys_message_02' 
+																					 WHEN 3 THEN 'user_sys_message_03' 
+																					 WHEN 4 THEN 'user_sys_message_04' 
+																					 WHEN 5 THEN 'user_sys_message_05' 
+																					 WHEN 6 THEN 'user_sys_message_06' 
+																					 WHEN 7 THEN 'user_sys_message_07' 
+																					 WHEN 8 THEN 'user_sys_message_08' 
+																					 WHEN 9 THEN 'user_sys_message_09'
+																					 ELSE 'user_sys_message'
+											END;
+
+		SET @sqlcmd = CONCAT('Select msgid pmid, Case When msgtype = 3 Then 4 Else msgtype End contenttype, action, 
+                                 date_format(adddate + INTERVAL 1 SECOND, ''%Y-%m-%d %H:%i:%s'') date, 
+                                 content, IFNULL(url, '''') contenturl, '''' avatar, IFNULL(title, '''') title, userid toid
+														From user_sys_message a
+														Where userid = ', _uid, ' and adddate > DATE_ADD(NOW(), INTERVAL -15 DAY) and adddate <= NOW();  ');
+
+		PREPARE stmt FROM @sqlcmd;
+		EXECUTE stmt;
+		DEALLOCATE PREPARE stmt;
+	END IF;
+
+END$$
+DELIMITER ;
+
+
+
+
+
+

@@ -69,10 +69,6 @@ select 31996,ptype,'视频监控套餐','http://sgs.pay.zgyey.com/tpay/index?kid={kid}
  from kmapp..Custom_Package where ptype=117 and deletetag=1 and ID=13
 
 
-然后利息是 一个月 
-
-select 40*8
-select 80000/12
 
 --视频缴费人数
   select kid,COUNT(1) 缴费人数,sum(fee_money) 金额

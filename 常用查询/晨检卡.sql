@@ -63,7 +63,7 @@ go
 
 --[15028]济南市市中区舜南幼儿园幼儿园__实行家长自行在时光树上购卡30元/张
 
---手机客户端支付。（在WEB端打开）
+--时光树客户端支付（微信和支付宝）。（在WEB端打开）
 http://sgs.pay.zgyey.com/cardpay/index?kid=23967&client=1&appver=1.085&uid=862914&role=2&feetype=5
 http://sgs.pay.zgyey.com/cardpay/index?kid=20675&client=1&appver=1.085&uid=1536233&role=2&feetype=5
 

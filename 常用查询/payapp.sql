@@ -55,7 +55,7 @@ where f.kid=20581 and f.deletetag=1
 
 --PayApp.[dbo].payapp_fees_Save     
 
-
+ 
 -------借阅服务，有效期设置（将 '2018-03-01' 改为 '2018-09-01'）------
 select * 
 --update s set expiresenddate='2018-09-01 00:00:00.000'
@@ -114,7 +114,7 @@ select *
 --update uf set enddate='2017-09-01'
 from PayApp..user_fees uf where enddate='2017-03-01' and crttime>='2017-01-01' and kid=14979
 
-select * 
+select *   
 --update uf set enddate='2017-09-01'
 from PayApp..sgs_pay_record uf where enddate='2017-03-01' and crtdate>='2017-01-01' and status=1 and kid=14979
 

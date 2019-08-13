@@ -8,6 +8,7 @@ from mcapp..cardinfo where kid=20850 and cardno = '8408761'
 select * from mcapp..cardinfo where card like '%418733%'
 select * from mcapp..cardinfo_log where card like '%7803090%'
 
+basicdata..move_user
 --我把418733这个卡分配给[20850]荔湾区金花幼儿园 大二班的刘锦旭
 
 select distinct EnrolNum from mcapp..cardinfo where kid=20850
@@ -38,3 +39,30 @@ begin
 end
 -----------------------------
 
+select max(EnrolNum) from mcapp..cardinfo where kid=18699
+declare @EnrolNum int=1121,@kid int=20850,@tokid int=18699
+Select ID, CardType, EnrolNum, udate, ROW_NUMBER() OVer(Order by ID) RowNo Into #card
+ From mcapp.dbo.cardinfo Where kid =@kid and cardno in(
+'8677833'
+,'8674650'
+,'8695917'
+,'4131286'
+,'6649877'
+,'8443817'
+,'4230812'
+,'4229682'
+,'4237591'
+,'4238057'
+,'4231667'
+,'4230249'
+,'4229337'
+,'4226438'
+,'4049250'
+,'6803062'
+)
+Update #card Set EnrolNum = @EnrolNum + RowNo, udate = GETDATE()
+--select @tokid tokid,b.EnrolNum,b.udate
+Update a Set kid = @tokid, EnrolNum = b.EnrolNum, udate = b.udate 
+ From mcapp.dbo.cardinfo a, #card b
+ Where a.kid = @kid and a.ID = b.ID  
+drop table #card

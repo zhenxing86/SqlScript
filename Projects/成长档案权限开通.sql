@@ -1,10 +1,8 @@
 
 
 -----------------------设置新学期的成长档案------------------------------------
-declare @date datetime=dateadd(month,3,getdate()) 
-exec CommonFun.dbo.SetCurTerm @kid=15923,@date=@date,@del_leave=1 
-
-
+declare @date datetime=dateadd(month,3,getdate())   --select * from ossapp..users where name='骆燕'     
+exec CommonFun.dbo.SetCurTerm @kid=15923,@date=@date,@douserid=384,@del_leave=1   --0：不删除user_class_all表中离园的用户，1：删除user_class_all表中离园的用户    
 
 
 -----------------------开放下载----------------------------------
@@ -23,15 +21,13 @@ where kid=14913 and term='2017-1'
 
 --select CommonFun.dbo.fn_getCurrentTerm(0,GETDATE(),0)
 
---[24071]广州金苗幼儿园  1月18日到25日开放成长档案下载，麻烦设置下
---[24072]广州海珠区金苗幼儿园（富力现代园区）  2月18日-2月25日
---[4246]协和幼儿园   1月20日——2月28日
-振兴，麻烦帮我把[27399]防城区大拇指幼儿园上学期的成长档案开通一下，开通到23号，幼儿园那边要下载
 
-declare @kids nvarchar(4000) ='27399'   --14933 14979
-,@term nvarchar(10)='2018-1'
-,@bgntime datetime = '2019-01-01'
-,@endtime datetime = '2019-03-23'
+24072]广州海珠区金苗幼儿园（富力现代园区）由于家长都没收到短信通知，过了下载成长档案时间，现在重新开放到8月2
+
+declare @kids nvarchar(4000) ='23269'   --14933 14979
+,@term nvarchar(10)='2019-0'
+,@bgntime datetime = '2019-07-12'
+,@endtime datetime = '2019-08-10'
 ;With Data as (  
 	select col kid,@term term,@bgntime bgntime,@endtime endtime
 	 from CommonFun.dbo.f_split(@kids,',')c
@@ -45,10 +41,31 @@ Insert (kid,term,bgntime,endtime,candown)
  Values(b.kid,b.term,b.bgntime,b.endtime,0); 
   
 go
+--[24072]广州海珠区金苗幼儿园（富力现代园区）成长档案下载时间设置为：7月22日-7月26日。
+--24072]广州海珠区金苗幼儿园（富力现代园区）李彧	13570980992申请成长档案没收到短信，现在下载不了，麻烦打开一下，谢谢
+[24072]广州海珠区金苗幼儿园（富力现代园区）成长档案延迟开放到8月4号
+
+--开放之前学期
+declare @kids nvarchar(4000) ='24072'   --14933 14979
+,@bgntime datetime = '2019-07-08'
+,@endtime datetime = '2019-08-05'
+;With Data as (  
+	select col kid,@bgntime bgntime,@endtime endtime
+	 from CommonFun.dbo.f_split(@kids,',')c
+)  
+Update p Set bgntime=b.bgntime,endtime=b.endtime,candown=0
+from ngbapp..growthbook_permission p
+ inner join Data b on p.kid=b.kid and p.term<>'2019-1'
+
+select * from ngbapp..growthbook_permission where kid=23269
+go
+
+[23269]云台里幼儿园 成长档案重新开放到7月31号
 
 select * 
---update g set candown=1
-from ngbapp..growthbook_permission g where kid=20675 and candown=0
+--update g set candown=0
+--update g set bgntime = '2019-07-08',endtime = '2019-07-15'
+from ngbapp..growthbook_permission g where kid=14979 and id>=86349 --and term='2018-1' and candown=0
 
 --全部开放
 declare
@@ -79,39 +96,13 @@ Insert (kid,term,bgntime,endtime,candown)
      and a.ftime<=GETDATE() And a.ltime>=GETDATE() And a3>0
    )
  
+ select * from gbapp..archives_apply where userid=2131554
+ '15920351883'
 
 select * from PayApp..fees where kid=23967
 
 select * from ngbapp..growthbook_permission where kid=27399
-select * from basicdata..kid_term where term='2018-0'
-
-14933 2016-1 419
-14933 2018-0 475
-
-getclassinfo
-
-
-  select ca.[cid],ca.[cname],g.gname                                                                                                                    
-    from basicdata..class_all ca                                              
-  inner join basicdata..grade g on g.gid=ca.grade                      
-    where kid=@kid and deletetag=1                                                                                                  
-  and ca.term=@term and ca.grade not in(38,96)                                                              
-    order by ca.grade
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
+select * from basicdata..kid_term where term='2019-1'
 -------------------------------------------------------------
 declare 
 @querySql nvarchar(4000)=''

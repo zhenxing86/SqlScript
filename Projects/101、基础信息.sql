@@ -1,15 +1,11 @@
 
 select * from basicdata..[user] where kid=23967 and usertype=1
-sqlagentdb
-Select b.name From Syscomments a, sysobjects b Where TEXT Like '%push_message_history%' and a.id = b.id
 
-HealthApp
-Select b.name From Syscomments a, sysobjects b Where TEXT Like '%subfees_buytime%' and a.id = b.id
+Select b.name From Syscomments a, sysobjects b Where TEXT Like '%kmapp%' and a.id = b.id
+kmapp
+SELECT tb2.name AS tableName,tb1.name AS triggerName FROM Sysobjects tb1 JOIN Sysobjects tb2 ON tb1.parent_obj=tb2.id WHERE tb1.type='TR'
 
- commonfun
- ossapp
-dbo.move_push_message
-dbo.push_message_pmid
+
 --查某个幼儿园的某个时间范围内的修改[user]表的日志
 select l.DoUserID, u.userid,u.account,u.name,u.kid,l.* from BasicData..[user] u left join 
 AppLogs.dbo.EditLog l on u.userid=l.KeyCol --and u.kid=20675
